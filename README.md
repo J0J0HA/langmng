@@ -151,3 +151,7 @@ This enables us to do this in the HTML:
 ```html
 <p data-langmng="@description">This is a description</p>
 ```
+
+## View the example page
+
+You can view the example page [here](https://j0j0ha.github.io/langmng/example.html).
