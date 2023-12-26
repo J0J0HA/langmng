@@ -1,8 +1,4 @@
-const sleep = function (ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-window.langmng = (function (window) {
+window.langmng = (function () {
     const langmng = {};
     langmng.configBase = "/langmng/";
     langmng.config = {};
@@ -225,4 +221,4 @@ window.langmng = (function (window) {
     });
 
     return langmng;
-})(window);
+})();
