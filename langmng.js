@@ -79,6 +79,7 @@ window.langmng = (function () {
         return bodyData?.set?.pageId || pageId || "unknown";
     }
     langmng.loadTranslations = async function (language, page, allowCache = true) {
+        console.log(allowCache, cachedTranslations)
         if (allowCache && cachedTranslations?.[language]?.[page]) {
             return cachedTranslations[language][page];
         }
@@ -89,7 +90,7 @@ window.langmng = (function () {
             cachedTranslations[language][page] = responseAsJson;
             return responseAsJson;
         } catch (e) {
-            console.error(`Could not load translation for page ${page} and language ${language}`);
+            console.error(`Could not load translation for page ${page} and language ${language}`, e);
             return {};
         }
     }
@@ -114,9 +115,22 @@ window.langmng = (function () {
             return key + "=" + combinedKey;
         }
     }
-    langmng.translate = async function (language) {
+    langmng.getTranslatedText = async function (language, key, value) {
+        const fallbackLanguage = bodyConfig.set?.fallbackLanguage || config.fallbackLanguage;
         const pageConfig = await langmng.getPageConfig();
         const pageId = pageConfig.pageId;
+        const translations = await pageConfig.loadTranslations(language);
+        if (language == fallbackLanguage && !translations[value]) {
+            console.warn(`No translation found for key: ${key}, value: ${value}`);
+            return langmng.getEmergencyTranslation(pageId, language, key, value);
+        } else if (!translations[value]) {
+            console.warn(`No translation found for key: ${key}, value: ${value}; using fallback language`);
+            return langmng.getTranslatedText(fallbackLanguage, key, value);
+        }
+        return translations[value];
+    }
+    langmng.translate = async function (language) {
+        const pageConfig = await langmng.getPageConfig();
         const translations = await pageConfig.loadTranslations(language);
         const elements = document.querySelectorAll("[data-langmng]");
         for (const element of elements) {
@@ -124,10 +138,10 @@ window.langmng = (function () {
             if (data.translate) {
                 for (let [key, value] of Object.entries(data.translate)) {
                     if (key == "content") {
-                        element.innerHTML = translations[value] || langmng.getEmergencyTranslation(pageId, language, "content", value);
+                        element.innerHTML = await langmng.getTranslatedText(language, key, value);
                     }
                     else if (key.startsWith("attr.")) {
-                        element.setAttribute(key.substring(5), translations[value] || langmng.getEmergencyTranslation(pageId, language, key, value));
+                        element.setAttribute(key.substring(5), await langmng.getTranslatedText(language, key, value));
                     }
                 }
             }
@@ -156,7 +170,7 @@ window.langmng = (function () {
                             select.appendChild(option);
                         }
                         select.value = language;
-                        select.addEventListener("change", () => { langmng.translate(select.value); });
+                        select.addEventListener("change", () => { langmng.setLanguage(select.value); });
                         element.innerHTML = "";
                         element.appendChild(select);
                     } else {
@@ -193,13 +207,13 @@ window.langmng = (function () {
         }
     }
     langmng.loadCaches = async function () {
-        const cachedTranslationsFromLStore = localStorage.getItem("cachedTranslations");
-        if (cachedTranslations) {
+        const cachedTranslationsFromLStore = localStorage.getItem("langmng.cachedTranslations");
+        if (cachedTranslationsFromLStore) {
             cachedTranslations = JSON.parse(cachedTranslationsFromLStore);
         }
     }
     langmng.storeCaches = async function () {
-        localStorage.setItem("cachedTranslations", JSON.stringify(cachedTranslations));
+        localStorage.setItem("langmng.cachedTranslations", JSON.stringify(cachedTranslations));
     }
     langmng.preloadAllTranslations = async function (allowCache = true) {
         const pageId = await langmng.getPageId();
@@ -212,16 +226,26 @@ window.langmng = (function () {
     langmng.reloadAllTranslations = async function () {
         await langmng.preloadAllTranslations(false);
     }
+    langmng.reloadAllTranslationsIfOutdated = async function () {
+        const currentUsedVersion = localStorage.getItem("langmng.translationVersion");
+        if (currentUsedVersion != config.translationVersion) {
+            await langmng.reloadAllTranslations();
+            localStorage.setItem("langmng.translationVersion", config.translationVersion);
+        }
+    }
     langmng.getLanguage = async function () {
         let lastLanguage = localStorage.getItem("langmng.language");
         if (!Object.keys(config.languages).indexOf(lastLanguage) == -1) {
             lastLanguage = null;
         }
-        return lastLanguage || langmng.getDataFromElement(document.body)["default-language"] || config.defaultLanguage;
+        return lastLanguage || bodyConfig.set?.defaultLanguage || config.defaultLanguage;
     }
     langmng.setLanguage = async function (language) {
+        const oldLanguage = await langmng.getLanguage();
         localStorage.setItem("langmng.language", language);
-        await langmng.translate(language);
+        if (oldLanguage != language) {
+            await langmng.translate(language);
+        }
     }
     langmng.initialize = async function () {
         await langmng.loadBodyConfig();
@@ -237,7 +261,6 @@ window.langmng = (function () {
         }
         await langmng.loadCaches();
         await langmng.loadConfig();
-        langmng.preloadAllTranslations();
         await langmng.readDirectivesFromElements();
         const language = await langmng.getLanguage();
         await langmng.setLanguage(language);
@@ -247,7 +270,7 @@ window.langmng = (function () {
                 langmng.restoreStyle(document.body);
             }, 500);
         }
-        await langmng.reloadAllTranslations();
+        await langmng.reloadAllTranslationsIfOutdated();
         await langmng.translate(await langmng.getLanguage());
     };
     document.addEventListener("DOMContentLoaded", () => {

@@ -3,5 +3,6 @@
     "description": "This is a sample description.",
     "placeholder": "This is a placeholder text.",
     "isTextVisible": true,
-    "thisAlsoWorks": "This also works!"
+    "thisAlsoWorks": "This also works!",
+    "someKey": "Some value"
 }

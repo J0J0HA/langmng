@@ -26,7 +26,9 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
             "en": "English",
             "de": "Deutsch"
         },
-        "defaultLanguage": "en"
+        "defaultLanguage": "en",
+        "fallbackLanguage": "en",
+        "translationVersion": 1
     }
     ```
 
@@ -85,6 +87,10 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
     </html>
     ```
 
+## What is ``translationVersion`` in ``config.json``?
+
+The ``translationVersion`` property in ``config.json`` is used to invalidate the cache of the translations. If you change the value of the property, the cache will be invalidated and the translations will be reloaded. This is useful if you change the translations but the user still sees the old translations because they are cached. YOu should not use the same identifier twiche (like switching between 0 and 1), maybe use commit hashes or timestamps instead. Until the new translations are loaded, the user will still see the old translations.
+
 ## The translation options
 
 ### translate:content
@@ -127,6 +133,14 @@ This setting specifies if the page should fade in when all translations are load
 #### set:pageId
 
 This setting specifies the page ID. The value of the setting should be a string. For example, if you want to set the page ID to `example`, you should add the following attribute to the body: `data-langmng="set:pageId=example;"`. Default is retrieved under `config.json`->``pages``. If that is not availible, the default is ``unknown``.
+
+#### set:defaultLanguage
+
+This overrides the ``defaultLanguage`` defined in ``config.json``.
+
+#### set:fallbackLanguage
+
+This overrides the ``fallbackLanguage`` defined in ``config.json``.
 
 ### set:content
 

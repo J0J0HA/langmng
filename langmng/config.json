@@ -7,5 +7,7 @@
         "de": "Deutsch",
         "fr": "Français"
     },
-    "defaultLanguage": "en"
+    "defaultLanguage": "en",
+    "fallbackLanguage": "en",
+    "translationVersion": "2"
 }
