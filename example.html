@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-langmng="translate:content=title">Document</title>
+
+    <script src="/langmng.js"></script>
+</head>
+<body data-langmng="set:base=/langmng/;set:hideUntilTranslated=true;set:fadeIn=true;">
+    <h1 data-langmng="translate:content=title;">Hello World</h1>
+    <p data-langmng="translate:content=description;">This is a description</p>
+    <p data-langmng="visibility=isTextVisible">Only visible in en</p>
+    <input type="text" data-langmng="translate:attr.placeholder=placeholder;" placeholder="This is a placeholder"><br>
+    <span data-langmng="placeFeature=languageSelect;">Select Language</span><br><br>
+    <span data-langmng="translate:content=nonexistant">This has no translation</span>
+    <input type="text" data-langmng="translate:attr.placeholder=someKey;" placeholder="This neither">
+    <br>
+    <br>
+    <div>@langmng:thisAlsoWorks</div>
+    <input type="text" placeholder="@langmng:butThisWont">
+</body>
+</html>

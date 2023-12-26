@@ -1,0 +1,10 @@
+{
+    "paths": {
+        "/example.html": "example"
+    },
+    "languages": {
+        "en": "English",
+        "de": "Deutsch"
+    },
+    "defaultLanguage": "en"
+}
