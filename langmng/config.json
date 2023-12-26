@@ -4,7 +4,8 @@
     },
     "languages": {
         "en": "English",
-        "de": "Deutsch"
+        "de": "Deutsch",
+        "fr": "Français"
     },
     "defaultLanguage": "en"
 }
