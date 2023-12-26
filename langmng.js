@@ -1,10 +1,9 @@
 window.langmng = (function () {
     const langmng = {};
-    langmng.configBase = "/langmng/";
-    langmng.config = {};
-    langmng.pageConfig = {};
-    langmng.bodyConfig = {};
-    langmng.cachedTranslations = {};
+    let config = {};
+    let pageConfig = {};
+    let bodyConfig = {};
+    let cachedTranslations = {};
     langmng._groupDirectives = async function (directives) {
         const groupedDirectives = {};
         for (const [key, value] of Object.entries(directives)) {
@@ -23,7 +22,7 @@ window.langmng = (function () {
     langmng.parseData = async function (data) {
         if (data.startsWith("@")) {
             const langmngId = data.substring(1);
-            return await langmng.parseData(langmng.pageConfig[langmngId] || "set:content=@" + langmng.getEmergencyTranslation(await langmng.getPageId(), langmng.config.defaultLanguage, "content", langmngId));
+            return await langmng.parseData(pageConfig[langmngId] || "set:content=@" + langmng.getEmergencyTranslation(await langmng.getPageId(), config.defaultLanguage, "content", langmngId));
         }
         const directives = data.split(";");
         const dataAsJson = {};
@@ -46,20 +45,19 @@ window.langmng = (function () {
     }
     langmng.loadBodyConfig = async function () {
         const bodyData = await langmng.getDataFromElement(document.body);
-        langmng.configBase = langmng.bodyConfig?.set?.base || langmng.configBase;
-        langmng.bodyConfig = bodyData;
+        bodyConfig = bodyData;
     }
     langmng.getConfigPath = async function (path) {
-        return langmng.configBase + path;
+        return (bodyConfig?.set?.base || "/langmng/") + path;
     }
     langmng.loadConfig = async function () {
         try {
             const response = await fetch(await langmng.getConfigPath("config.json"));
             const responseAsJson = await response.json();
-            langmng.config = responseAsJson;
+            config = responseAsJson;
         }
         catch (e) {
-            langmng.config = { defaultLanguage: "Unknown", languages: { "Unknown": "Failed to load languages." }, paths: {} };
+            config = { defaultLanguage: "Unknown", languages: { "Unknown": "Failed to load languages." }, paths: {} };
             console.error("Could not load config.json");
         }
 
@@ -68,27 +66,27 @@ window.langmng = (function () {
         try {
             const responsePageConfig = await fetch(pageConfigPath);
             const responsePageConfigAsJson = await responsePageConfig.json();
-            langmng.pageConfig = responsePageConfigAsJson;
+            pageConfig = responsePageConfigAsJson;
         } catch (e) {
-            langmng.pageConfig = {};
+            pageConfig = {};
             console.warn(`Could not load page config from ${pageConfigPath}`);
         }
     };
     langmng.getPageId = async function () {
         const bodyData = await langmng.getDataFromElement(document.body);
         const path = window.location.pathname;
-        const pageId = langmng.config.paths[path];
+        const pageId = config.paths[path];
         return bodyData?.set?.pageId || pageId || "unknown";
     }
-    langmng.loadTranslations = async function (language, page) {
-        if (langmng.cachedTranslations?.[language]?.[page]) {
-            return langmng.cachedTranslations[language][page];
+    langmng.loadTranslations = async function (language, page, allowCache = true) {
+        if (allowCache && cachedTranslations?.[language]?.[page]) {
+            return cachedTranslations[language][page];
         }
         try {
             const response = await fetch(await langmng.getConfigPath(`pages/${page}/${language}.json`));
             const responseAsJson = await response.json();
-            langmng.cachedTranslations[language] = langmng.cachedTranslations[language] || {};
-            langmng.cachedTranslations[language][page] = responseAsJson;
+            cachedTranslations[language] = cachedTranslations[language] || {};
+            cachedTranslations[language][page] = responseAsJson;
             return responseAsJson;
         } catch (e) {
             console.error(`Could not load translation for page ${page} and language ${language}`);
@@ -98,7 +96,7 @@ window.langmng = (function () {
     langmng.getPageConfig = async function () {
         const pageId = await langmng.getPageId();
         return {
-            languages: langmng.config.languages,
+            languages: config.languages,
             pageId: pageId,
             loadTranslations: async function (language) {
                 return await langmng.loadTranslations(language, pageId);
@@ -194,27 +192,63 @@ window.langmng = (function () {
             element.setAttribute("data-langmng", dirs);
         }
     }
+    langmng.loadCaches = async function () {
+        const cachedTranslationsFromLStore = localStorage.getItem("cachedTranslations");
+        if (cachedTranslations) {
+            cachedTranslations = JSON.parse(cachedTranslationsFromLStore);
+        }
+    }
+    langmng.storeCaches = async function () {
+        localStorage.setItem("cachedTranslations", JSON.stringify(cachedTranslations));
+    }
+    langmng.preloadAllTranslations = async function (allowCache = true) {
+        const pageId = await langmng.getPageId();
+        const languages = config.languages;
+        for (const language of Object.keys(languages)) {
+            await langmng.loadTranslations(language, pageId, allowCache);
+        }
+        await langmng.storeCaches();
+    }
+    langmng.reloadAllTranslations = async function () {
+        await langmng.preloadAllTranslations(false);
+    }
+    langmng.getLanguage = async function () {
+        let lastLanguage = localStorage.getItem("langmng.language");
+        if (!Object.keys(config.languages).indexOf(lastLanguage) == -1) {
+            lastLanguage = null;
+        }
+        return lastLanguage || langmng.getDataFromElement(document.body)["default-language"] || config.defaultLanguage;
+    }
+    langmng.setLanguage = async function (language) {
+        localStorage.setItem("langmng.language", language);
+        await langmng.translate(language);
+    }
     langmng.initialize = async function () {
         await langmng.loadBodyConfig();
-        if (langmng.bodyConfig?.set?.hideUntilTranslated === "true") {
+        if (bodyConfig?.set?.hideUntilTranslated === "true") {
             document.body.style.display = "block";
             langmng.storeStyle(document.body);
             document.body.style.opacity = "0";
-            if (langmng.bodyConfig?.set?.fadeIn === "true") {
+            if (bodyConfig?.set?.fadeIn === "true") {
                 setTimeout(() => {
                     document.body.style.transition = "opacity 0.5s ease-in-out";
                 }, 0);
             }
         }
+        await langmng.loadCaches();
         await langmng.loadConfig();
+        langmng.preloadAllTranslations();
         await langmng.readDirectivesFromElements();
-        await langmng.translate(langmng.getDataFromElement(document.body)["default-language"] || langmng.config.defaultLanguage);
-        if (langmng.bodyConfig?.set?.hideUntilTranslated === "true") {
+        const language = await langmng.getLanguage();
+        await langmng.setLanguage(language);
+        if (bodyConfig?.set?.hideUntilTranslated === "true") {
             document.body.style.opacity = "1";
             setTimeout(() => {
                 langmng.restoreStyle(document.body);
             }, 500);
         }
+        await langmng.reloadAllTranslations();
+        await langmng.translate(await langmng.getLanguage());
     };
     document.addEventListener("DOMContentLoaded", () => {
         langmng.initialize();
