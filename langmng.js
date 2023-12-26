@@ -69,7 +69,7 @@ window.langmng = (function () {
             pageConfig = responsePageConfigAsJson;
         } catch (e) {
             pageConfig = {};
-            console.warn(`Could not load page config from ${pageConfigPath}`);
+            console.info(`Could not load page config from ${pageConfigPath}`);
         }
     };
     langmng.getPageId = async function () {
@@ -79,7 +79,6 @@ window.langmng = (function () {
         return bodyData?.set?.pageId || pageId || "unknown";
     }
     langmng.loadTranslations = async function (language, page, allowCache = true) {
-        console.log(allowCache, cachedTranslations)
         if (allowCache && cachedTranslations?.[language]?.[page]) {
             return cachedTranslations[language][page];
         }
@@ -105,7 +104,6 @@ window.langmng = (function () {
         };
     }
     langmng.getEmergencyTranslation = function (pageId, language, key, value) {
-        console.warn(`No translation found for key: ${key}, value: ${value}`);
         const combinedKey = pageId + "." + language + "." + value;
         if (key == "content") {
             return combinedKey;
@@ -124,7 +122,7 @@ window.langmng = (function () {
             console.warn(`No translation found for key: ${key}, value: ${value}`);
             return langmng.getEmergencyTranslation(pageId, language, key, value);
         } else if (!translations[value]) {
-            console.warn(`No translation found for key: ${key}, value: ${value}; using fallback language`);
+            console.warn(`No translation found for key: ${key}, value: ${value} (language: ${language}))`);
             return langmng.getTranslatedText(fallbackLanguage, key, value);
         }
         return translations[value];
@@ -174,7 +172,7 @@ window.langmng = (function () {
                         element.innerHTML = "";
                         element.appendChild(select);
                     } else {
-                        console.error(`Unknown use directive: ${value}`);
+                        console.warn(`Unknown use directive: ${value}`);
                     }
                 } else if (key.startsWith("set")) {
                     if (value.content) {
@@ -182,10 +180,10 @@ window.langmng = (function () {
                     } else if (value.fadeIn || value.hideUntilTranslated || value.base || value.pageId) {
                         continue;
                     } else {
-                        console.error(`Unknown set directive: ${key}`);
+                        console.warn(`Unknown set directive: ${key}`);
                     }
                 } else {
-                    console.error(`Unknown directive: ${key}`);
+                    console.warn(`Unknown directive: ${key}`);
                 }
             }
         }
