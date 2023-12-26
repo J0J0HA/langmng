@@ -71,7 +71,7 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
     </head>
     <body data-langmng="set:base=/langmng/;set:hideUntilTranslated=true;set:fadeIn=true;">
         <h1 data-langmng="translate:content=title;">Hello World</h1>
-        <p data-langmng="translate:content=description;">This is a description</p>
+        <p data-langmng="@description">This is a description</p>
         <p data-langmng="visibility=isTextVisible">Only visible in en</p>
         <input type="text" data-langmng="translate:attr.placeholder=placeholder;" placeholder="This is a placeholder"><br>
         <span data-langmng="placeFeature=languageSelect;">Select Language</span><br><br>
@@ -107,23 +107,47 @@ This feature places a language selector in the element. The value of the option 
 
 ### set:*
 
-This feature can set a page-wide setting for langmng if applied to the body element. The value of the option should be the name of the setting. The following settings are available:
+This features can set page-wide settings for langmng if applied to the body element (except `set:content`). The value of the option should be the name of the setting. The following settings are available:
 
-### set:base
+#### set:base
 
 This setting specifies the base path to the translations. The value of the setting should be a string. For example, if you want to set the base path to `/langs/` (instead of ``/langmng/``), you should add the following attribute to the body: `data-langmng="set:base=/langs/;"`.
 
-### set:hideUntilTranslated
+#### set:hideUntilTranslated
 
 This setting specifies if the page should be hidden until all translations are loaded. The value of the setting should be a boolean. For example, if you want to hide the page until all translations are loaded, you should add the following attribute to the body: `data-langmng="set:hideUntilTranslated=true;"`. Default: `false`.
 
 > [!IMPORTANT]  
 > This will overwrite the `display` property of the body element to ``block``.
 
-### set:fadeIn
+#### set:fadeIn
 
 This setting specifies if the page should fade in when all translations are loaded. Only applies if `set:hideUntilTranslated` is ``true``. The value of the setting should be a boolean. For example, if you want to fade in the page when all translations are loaded, you should add the following attribute to the body: `data-langmng="set:fadeIn=true;"`. Default: `false`.
+
+#### set:pageId
+
+This setting specifies the page ID. The value of the setting should be a string. For example, if you want to set the page ID to `example`, you should add the following attribute to the body: `data-langmng="set:pageId=example;"`. Default is retrieved under `config.json`->``pages``. If that is not availible, the default is ``unknown``.
+
+### set:content
+
+This feature sets the content of the element. The value of the option should be valid HTML. For example, if you want to set the content of a paragraph to ``hello``, you should add the following attribute to the paragraph: `data-langmng="set:content=hello;"`. (Used internally to place error messages)
 
 ## Direct HTML translations with @langmng
 
 Elements with the content of `@langmng:langmngID` will be replaced with the translation of the langmngID. For example, if you want to replace the content of a div with the translation of the langmngID `thisAlsoWorks`, you should add the following element to the div: `<div>@langmng:thisAlsoWorks</div>`. This currently only works for the content of elements.
+
+## Seperating the translations from the HTML
+
+If you want, you can use the `@`-feature to clean up your HTML. The `@`-feature allows you to seperate the translations from the HTML. To use it, you have to create a file called `<pageId>.json` in the `langmng/pages` folder for every page. The content of the file should be a list of key-value pairs in JSON format. The keys represent a unique identifier, the values should be what you would normally write in the `data-langmng`. Then, in the elements ``data-langmng``, you just write `@<identifier>` with the unique identifier specified earlier. In the example above, the descripton uses that feature. The `example.json` file looks like this:
+
+```json
+{
+    "description": "translate:content=description;"
+}
+```
+
+This enables us to do this in the HTML:
+
+```html
+<p data-langmng="@description">This is a description</p>
+```

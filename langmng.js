@@ -6,8 +6,8 @@ window.langmng = (function (window) {
     const langmng = {};
     langmng.configBase = "/langmng/";
     langmng.config = {};
-    langmng.hideUntilTranslated = false;
-    langmng.shouldFadeIn = false;
+    langmng.pageConfig = {};
+    langmng.bodyConfig = {};
     langmng.cachedTranslations = {};
     langmng._groupDirectives = async function (directives) {
         const groupedDirectives = {};
@@ -25,6 +25,10 @@ window.langmng = (function (window) {
         return groupedDirectives;
     }
     langmng.parseData = async function (data) {
+        if (data.startsWith("@")) {
+            const langmngId = data.substring(1);
+            return await langmng.parseData(langmng.pageConfig[langmngId] || "set:content=@" + langmng.getEmergencyTranslation(await langmng.getPageId(), langmng.config.defaultLanguage, "content", langmngId));
+        }
         const directives = data.split(";");
         const dataAsJson = {};
         for (const directive of directives) {
@@ -37,7 +41,7 @@ window.langmng = (function (window) {
         return this._groupDirectives(dataAsJson);
     }
     langmng.getDataFromElement = async function (element) {
-        const data = element.getAttribute("data-langmng");
+        let data = element.getAttribute("data-langmng");
         if (!data) {
             return {};
         }
@@ -46,30 +50,39 @@ window.langmng = (function (window) {
     }
     langmng.loadBodyConfig = async function () {
         const bodyData = await langmng.getDataFromElement(document.body);
-        if (bodyData?.set?.hideUntilTranslated === "true") {
-            langmng.hideUntilTranslated = true;
-        }
-        if (bodyData?.set?.fadeIn === "true") {
-            langmng.shouldFadeIn = true;
-        }
-        langmng.configBase = bodyData?.set?.base || langmng.configBase;
+        langmng.configBase = langmng.bodyConfig?.set?.base || langmng.configBase;
+        langmng.bodyConfig = bodyData;
     }
     langmng.getConfigPath = async function (path) {
         return langmng.configBase + path;
     }
     langmng.loadConfig = async function () {
-        const response = await fetch(await langmng.getConfigPath("config.json"));
-        const responseAsJson = await response.json();
-        langmng.config = responseAsJson;
+        try {
+            const response = await fetch(await langmng.getConfigPath("config.json"));
+            const responseAsJson = await response.json();
+            langmng.config = responseAsJson;
+        }
+        catch (e) {
+            langmng.config = { defaultLanguage: "Unknown", languages: { "Unknown": "Failed to load languages." }, paths: {} };
+            console.error("Could not load config.json");
+        }
+
+        const pageId = await langmng.getPageId();
+        const pageConfigPath = await langmng.getConfigPath(`pages/${pageId}.json`);
+        try {
+            const responsePageConfig = await fetch(pageConfigPath);
+            const responsePageConfigAsJson = await responsePageConfig.json();
+            langmng.pageConfig = responsePageConfigAsJson;
+        } catch (e) {
+            langmng.pageConfig = {};
+            console.warn(`Could not load page config from ${pageConfigPath}`);
+        }
     };
     langmng.getPageId = async function () {
         const bodyData = await langmng.getDataFromElement(document.body);
-        if (bodyData?.set?.pageId) {
-            return bodyData.set.pageId;
-        }
         const path = window.location.pathname;
         const pageId = langmng.config.paths[path];
-        return pageId;
+        return bodyData?.set?.pageId || pageId || "unknown";
     }
     langmng.loadTranslations = async function (language, page) {
         if (langmng.cachedTranslations[language] && langmng.cachedTranslations[language][page]) {
@@ -137,7 +150,7 @@ window.langmng = (function (window) {
                 }
             }
             for (const [key, value] of Object.entries(data)) {
-                if (key == "translate" || key == "visibility" || key == "set") {
+                if (key == "translate" || key == "visibility") {
                     continue;
                 }
                 if (key.startsWith("placeFeature")) {
@@ -158,6 +171,14 @@ window.langmng = (function (window) {
                         element.appendChild(select);
                     } else {
                         console.error(`Unknown use directive: ${value}`);
+                    }
+                } else if (key.startsWith("set")) {
+                    if (value.content) {
+                        element.innerHTML = value.content;
+                    } else if (value.fadeIn || value.hideUntilTranslated || value.base || value.pageId) {
+                        continue;
+                    } else {
+                        console.error(`Unknown set directive: ${key}`);
                     }
                 } else {
                     console.error(`Unknown directive: ${key}`);
@@ -183,11 +204,11 @@ window.langmng = (function (window) {
     }
     langmng.initialize = async function () {
         await langmng.loadBodyConfig();
-        if (langmng.hideUntilTranslated) {
+        if (langmng.bodyConfig?.set?.hideUntilTranslated === "true") {
             document.body.style.display = "block";
             langmng.storeStyle(document.body);
             document.body.style.opacity = "0";
-            if (langmng.shouldFadeIn) {
+            if (langmng.bodyConfig?.set?.fadeIn === "true") {
                 setTimeout(() => {
                     document.body.style.transition = "opacity 0.5s ease-in-out";
                 }, 0);
@@ -196,7 +217,7 @@ window.langmng = (function (window) {
         await langmng.loadConfig();
         await langmng.readDirectivesFromElements();
         await langmng.translate(langmng.getDataFromElement(document.body)["default-language"] || langmng.config.defaultLanguage);
-        if (langmng.hideUntilTranslated) {
+        if (langmng.bodyConfig?.set?.hideUntilTranslated === "true") {
             document.body.style.opacity = "1";
             setTimeout(() => {
                 langmng.restoreStyle(document.body);
