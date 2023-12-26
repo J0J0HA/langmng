@@ -85,7 +85,7 @@ window.langmng = (function (window) {
         return bodyData?.set?.pageId || pageId || "unknown";
     }
     langmng.loadTranslations = async function (language, page) {
-        if (langmng.cachedTranslations[language] && langmng.cachedTranslations[language][page]) {
+        if (langmng.cachedTranslations?.[language]?.[page]) {
             return langmng.cachedTranslations[language][page];
         }
         try {
@@ -141,12 +141,10 @@ window.langmng = (function (window) {
                 if (!translations[data.visibility]) {
                     langmng.storeStyle(element);
                     element.style.display = "none";
+                } else if (element.hasAttribute("langmng-previous-display")) {
+                    langmng.restoreStyle(element);
                 } else {
-                    if (element.hasAttribute("langmng-previous-display")) {
-                        langmng.restoreStyle(element);
-                    } else {
-                        element.style.display = "";
-                    }
+                    element.style.display = "";
                 }
             }
             for (const [key, value] of Object.entries(data)) {
@@ -164,9 +162,7 @@ window.langmng = (function (window) {
                             select.appendChild(option);
                         }
                         select.value = language;
-                        select.addEventListener("change", async () => {
-                            await langmng.translate(select.value);
-                        });
+                        select.addEventListener("change", () => { langmng.translate(select.value); });
                         element.innerHTML = "";
                         element.appendChild(select);
                     } else {
@@ -224,7 +220,9 @@ window.langmng = (function (window) {
             }, 500);
         }
     };
-    document.addEventListener("DOMContentLoaded", () => langmng.initialize());
+    document.addEventListener("DOMContentLoaded", () => {
+        langmng.initialize();
+    });
 
     return langmng;
 })(window);
