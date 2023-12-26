@@ -136,10 +136,14 @@ window.langmng = (function () {
             if (data.translate) {
                 for (let [key, value] of Object.entries(data.translate)) {
                     if (key == "content") {
-                        element.innerHTML = await langmng.getTranslatedText(language, key, value);
+                        langmng.getTranslatedText(language, key, value).then((translatedText) => {
+                            element.innerHTML = translatedText;
+                        });
                     }
                     else if (key.startsWith("attr.")) {
-                        element.setAttribute(key.substring(5), await langmng.getTranslatedText(language, key, value));
+                        langmng.getTranslatedText(language, key, value).then((translatedText) => {
+                            element.setAttribute(key.substring(5), translatedText);
+                        });
                     }
                 }
             }
