@@ -159,8 +159,14 @@ window.langmng = (function () {
         if (data.translate) {
             for (let [key, value] of Object.entries(data.translate)) {
                 if (key == "content") {
-                    const translatedText = await langmng.getTranslation(value);
+                    let translatedText = await langmng.getTranslation(value);
+                    element.querySelectorAll(":scope > [data-langmng-include]").forEach((e) => {
+                        translatedText = translatedText.replace("{" + e.getAttribute("data-langmng-include") + "}", e.outerHTML);
+                    });
                     element.innerHTML = translatedText;
+                    for (let el of element.querySelectorAll(":scope > [data-langmng]")) {
+                        await langmng.translateElement(el);
+                    }
                 }
                 else if (key.startsWith("attr.")) {
                     const translatedText = await langmng.getTranslation(value)
@@ -169,7 +175,7 @@ window.langmng = (function () {
             }
         }
         for (const [key, value] of Object.entries(data)) {
-            if (key == "translate") {
+            if (key == "translate" || key == "include") {
                 continue;
             }
             if (key == "visibility") {
@@ -302,7 +308,7 @@ window.langmng = (function () {
         }
         localStorage.setItem("langmng.language", language);
         // if (oldLanguage != language) {
-            return await langmng.translatePage(language);
+        return await langmng.translatePage(language);
         // }
         return true;
     }

@@ -4,5 +4,7 @@
     "placeholder": "This is a placeholder text.",
     "isTextVisible": true,
     "thisAlsoWorks": "This also works!",
-    "someKey": "Some value"
+    "someKey": "Some value",
+    "include-demo": "I don't want to translate {THISTEXT}!",
+    "thisLink": "this link"
 }
