@@ -170,21 +170,28 @@ window.langmng = (function () {
                 }
             }
         }
-        if (data.visibility) {
-            if (!(await langmng.getTranslation(data.visibility, false, false))) {
-                langmng.storeStyle(element);
-                element.style.display = "none";
-            } else if (element.hasAttribute("langmng-previous-display")) {
-                langmng.restoreStyle(element);
-            } else {
-                element.style.display = "";
-            }
-        }
         for (const [key, value] of Object.entries(data)) {
-            if (key == "translate" || key == "visibility") {
+            if (key == "translate") {
                 continue;
             }
-            if (key.startsWith("placeFeature")) {
+            if (key == "visibility") {
+                if (!(await langmng.getTranslation(value, false, false))) {
+                    langmng.storeStyle(element);
+                    element.style.display = "none";
+                } else if (element.hasAttribute("langmng-previous-display")) {
+                    langmng.restoreStyle(element);
+                } else {
+                    element.style.display = "";
+                }
+            } else if (key == "preload") {
+                if (value.startsWith(">")) {
+                    langmng.preloadTranslationsForLink(element.getAttribute(value.substring(1)));
+                } else if (value.startsWith("@")) {
+                    langmng.preloadTranslationsForPage(value.substring(1));
+                } else {
+                    langmng.preloadTranslationsForLink(value);
+                }
+            } else if (key.startsWith("placeFeature")) {
                 if (value == "languageSelect") {
                     langmng.placeLanguageSelector(element);
                 } else {
@@ -255,23 +262,40 @@ window.langmng = (function () {
         }
     }
     langmng.getLanguage = async function () {
+        let url = new URL(window.location.href);
+        let urlLanguage = url.searchParams.get("lang");
+        if (Object.keys(config.languages).indexOf(urlLanguage) == -1) {
+            urlLanguage = null;
+            url.searchParams.delete("lang");
+            window.history.replaceState({}, document.title, url.href);
+        }
         let lastLanguage = localStorage.getItem("langmng.language");
-        if (!Object.keys(config.languages).indexOf(lastLanguage) == -1) {
+        if (Object.keys(config.languages).indexOf(lastLanguage) == -1) {
             lastLanguage = null;
         }
-        return lastLanguage || bodyConfig.set?.defaultLanguage || config.defaultLanguage;
+        return urlLanguage || lastLanguage || bodyConfig.set?.defaultLanguage || config.defaultLanguage;
     }
-    langmng.preloadTranslationsForPage = async function (pageId) {
-        const language = await langmng.getLanguage();
+    langmng.preloadTranslationsForPage = async function (pageId, language) {
+        language = language === undefined ? await langmng.getLanguage() : language;
+        console.log(`Preloading translations for page ${pageId} and language ${language}`);
         return await langmng.getTranslations(language, true, pageId);
     }
-    langmng.preloadTranslationsForLink = async function (link) {
-        const url = new URL(link, document.baseURI)
+    langmng.preloadTranslationsForLink = async function (link, language) {
+        language = language === undefined ? await langmng.getLanguage() : language;
+        const url = new URL(link, document.baseURI);
+        if (url.searchParams.get("lang") !== null) {
+            language = url.searchParams.get("lang");
+        }
         const pageId = await langmng.getPageId(url.pathname);
-        return await langmng.preloadTranslationsForPage(pageId);
+        return await langmng.preloadTranslationsForPage(pageId, language);
     }
     langmng.setLanguage = async function (language) {
         const oldLanguage = await langmng.getLanguage();
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("lang") !== language) {
+            url.searchParams.set("lang", language);
+            window.history.replaceState({}, document.title, url.href);
+        }
         localStorage.setItem("langmng.language", language);
         if (oldLanguage != language) {
             await langmng.translatePage(language);

@@ -83,6 +83,7 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
         <br>
         <div>@langmng:thisAlsoWorks</div>
         <input type="text" placeholder="@langmng:butThisWont">
+        <a href="/example.html?lang=de" data-langmng="preload=@example;">Deutsch</a>
     </body>
     </html>
     ```
@@ -145,6 +146,14 @@ This overrides the ``fallbackLanguage`` defined in ``config.json``.
 ### set:content
 
 This feature sets the content of the element. The value of the option should be valid HTML. For example, if you want to set the content of a paragraph to ``hello``, you should add the following attribute to the paragraph: `data-langmng="set:content=hello;"`. (Used internally to place error messages)
+
+### preload
+
+This feature preloads the translation of another page. The value should be the link to the other page, relative or absolute. For example, if you want to preload the translations of the page `example.html`, you should add the following attribute to the element: `data-langmng="preload=example.html;"`.
+You can also use already existing attribute values with ``>``. For example, if you want to preload the translations of the page specified in the ``href`` attribute of a link, you should add the following attribute to the element: `data-langmng="preload=>href;"`.
+If you want to preload the translations of a specific page, you can use the ``@<pageId>`` syntax. For example, if you want to preload the translations of the page `example.html`, you should add the following attribute to the element: `data-langmng="preload=@example;"`.
+
+This feature also takes the ``lang`` query parameter into account. For example, if you want to preload the translations of the page `example.html` in the language `de`, you should add the following attribute to the element: `data-langmng="preload=example.html?lang=de;"`.
 
 ## Direct HTML translations with @langmng
 
@@ -244,6 +253,12 @@ Loads all not yet cached translations of the page found under the specified link
 ### More
 
 You can find more functions in the source code. I have just not documented them yet.
+
+## The query parameter ``lang``
+
+If a link is accessed with the query parameter ``lang``, the language will be set to the specified language. For example, if you access the link ``example.html?lang=de``, the language will be set to ``de``. If the specified language is not availible, the language will be set to the last language that was selected, otherwise the ``defaultLanguage``. Also, if the specified language is not availible, the query parameter will be removed from the URL.
+
+If the parameter is present in the link, changes to the language will not be reflected in the URL.
 
 ## Customization
 
