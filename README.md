@@ -26,6 +26,7 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
             "en": "English",
             "de": "Deutsch"
         },
+        "notFound": "notFound",
         "defaultLanguage": "en",
         "fallbackLanguage": "en",
         "translationVersion": 1
@@ -33,6 +34,7 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
     ```
 
     The `paths` property is an object that contains the paths to the HTML files that will be translated. The example above says to langmng that the translations for the path `/example.html` are located in the folder `/langmng/pages/example`. The `languages` property is an object that contains the languages that will be available in the language selector. The `defaultLanguage` property is the default language.
+    The ``notFound`` property states the pageId of the 404 page. If not specified, the default is ``unknown``.
 
 3. Create the translations:
     Inside the ``/langmng`` folder, create a folder called `pages`. Inside the `pages` folder, create a folder for each HTML file that you want to translate. The name of the folder should be the same as you specified in the ``config.json`` (see step 2). Inside each folder, create a file for each language that you want to translate the HTML file to. The name of the file should be the same as the language code. For example, if you want to translate the HTML file `example.html` to English and German, you should create the following files:
@@ -133,7 +135,7 @@ This setting specifies if the page should fade in when all translations are load
 
 #### set:pageId
 
-This setting specifies the page ID. The value of the setting should be a string. For example, if you want to set the page ID to `example`, you should add the following attribute to the body: `data-langmng="set:pageId=example;"`. Default is retrieved under `config.json`->``pages``. If that is not availible, the default is ``unknown``.
+This setting specifies the page ID. The value of the setting should be a string. For example, if you want to set the page ID to `example`, you should add the following attribute to the body: `data-langmng="set:pageId=example;"`. Default is retrieved under `config.json`->``pages``. If that is not availible, the default is ``unknown``, or ``notFound`` in ``config.json`` if specified.
 
 #### set:defaultLanguage
 

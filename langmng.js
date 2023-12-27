@@ -76,7 +76,7 @@ window.langmng = (function () {
         const bodyData = await langmng.getLangmngTagsAsDictFromElement(document.body);
         path = path === undefined ? window.location.pathname : path;
         const pageId = config.paths[path];
-        return bodyData?.set?.pageId || pageId || "unknown";
+        return bodyData?.set?.pageId || pageId || config.notFoundPage || "unknown";
     }
     langmng.getTranslations = async function (language = undefined, allowCache = true, pageId = undefined) {
         language = language === undefined ? await langmng.getLanguage() : language;
