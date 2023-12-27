@@ -159,14 +159,12 @@ window.langmng = (function () {
         if (data.translate) {
             for (let [key, value] of Object.entries(data.translate)) {
                 if (key == "content") {
-                    langmng.getTranslation(value).then((translatedText) => {
-                        element.innerHTML = translatedText;
-                    });
+                    const translatedText = await langmng.getTranslation(value);
+                    element.innerHTML = translatedText;
                 }
                 else if (key.startsWith("attr.")) {
-                    langmng.getTranslation(value).then((translatedText) => {
-                        element.setAttribute(key.substring(5), translatedText);
-                    });
+                    const translatedText = await langmng.getTranslation(value)
+                    element.setAttribute(key.substring(5), translatedText);
                 }
             }
         }
@@ -214,9 +212,11 @@ window.langmng = (function () {
 
     langmng.translatePage = async function () {
         const elements = document.querySelectorAll("[data-langmng]");
+        let promiseList = [];
         for (const element of elements) {
-            langmng.translateElement(element);
+            promiseList.push(langmng.translateElement(element));
         }
+        return await Promise.all(promiseList);
     }
     langmng.storeStyle = function (element) {
         element.setAttribute("data-langmng-old-style", element.getAttribute("style"));
