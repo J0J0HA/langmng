@@ -169,3 +169,74 @@ This enables us to do this in the HTML:
 ## View the example page
 
 You can view the example page [here](https://j0j0ha.github.io/langmng/example.html).
+
+## JavaScript API
+
+### Disabling autimatic initialization
+
+If you want to disable the automatic initialization, you can add the ``data-langmng-noinit`` attribute to the ``<body>`` tag. For example:
+
+```html
+<body data-langmng-noinit>
+```
+
+### ``async langmng.getTranslation(key, [useFallbackLanguage = true], [fallback])``
+
+Returns the translation of the specified key in the currently selected language. If the translation is not availible, it returns the translation in the fallback language, if ``useFallbackLanguage`` is ``true``. If the translation is not availible in the fallback language or ``useFallbackLanguage`` is ``false``, it returns the fallback. If the fallback is not specified, it returns the key in this format: ``<pageId>.<language>.<key>``.
+
+### ``async langmng.getTranslationIn(language, key, [useFallbackLanguage = true], [fallback])``
+
+Exactly the same as ``langmng.getTranslation``, but you can specify the language.
+
+### ``async langmng.getLanguage()``
+
+Returns the currently selected language.
+
+### ``async langmng.setLanguage(language)``
+
+Sets the currently selected language to the specified language. This also updates all translations.
+
+### ``async langmng.getConfig()``
+
+Returns an dict of all the config values loaded from ``config.json``, the body's ``data-langmng`` and ``pages/<pageId>.json``.
+You can find all availible languages under ``(await langmng.getConfig()).config.languages``.
+
+### ``async langmng.reloadAllTranslations()``
+
+Refreshes the translations of the current page in all available languages.
+
+### ``async langmng.reloadTranslationsIfOutdated(language)``
+
+Refreshes the translations of the current page in the specified language if the translation version is outdated.
+
+### ``async langmng.preloadAllTranslations()``
+
+Loads all not yet cached translations of the current page in all available languages.
+
+### ``async langmng.storeCache()``
+
+Stores the cache in the local storage.
+
+### ``async langmng.loadCache()``
+
+Loads the cache from the local storage.
+
+### ``async langmng.loadConfig()``
+
+Loads the config from ``config.json``.
+
+### ``async langmng.getTranslations()``
+
+Returns an dict of all the translations in all languages loaded from ``pages/<pageId>/<language>.json``.
+
+### ``async langmng.placeLanguageSelector(element)``
+
+Places a language selector in the specified element.
+
+### More
+
+You can find more functions in the source code. I have just not documented them yet.
+
+## Customization
+
+You can customize the look of the language selector by changing the look of the ``lanmng-language-selector`` and ``langmng-language-selector-container`` class in CSS.

@@ -22,7 +22,7 @@ window.langmng = (function () {
     langmng.parseLangmngTags = async function (data) {
         if (data.startsWith("@")) {
             const langmngId = data.substring(1);
-            return await langmng.parseLangmngTags(pageConfig[langmngId] || "set:content=@" + langmng.getTranslationReplacement(await langmng.getPageId(), config.defaultLanguage, "content", langmngId));
+            return await langmng.parseLangmngTags(pageConfig[langmngId] || "set:content=@" + await langmng.getTranslationReplacement(await langmng.getPageId(), config.defaultLanguage, "content", langmngId));
         }
         const directives = data.split(";");
         const dataAsJson = {};
@@ -116,7 +116,7 @@ window.langmng = (function () {
         const combinedKey = pageId + "." + language + "." + value;
         return combinedKey;
     }
-    langmng.getTranslationIn = async function (language, value, useFallbackLanguage = true, fallback) {
+    langmng.getTranslationIn = async function (language, value, useFallbackLanguage = true, fallback = undefined) {
         const fallbackLanguage = bodyConfig.set?.fallbackLanguage || config.fallbackLanguage;
         const pageConfig = await langmng.getPage();
         const pageId = pageConfig.pageId;
@@ -134,72 +134,75 @@ window.langmng = (function () {
         return translations[value];
     }
 
-    langmng.getTranslation = async function (key, useFallbackLanguage = true, fallback) {
+    langmng.getTranslation = async function (key, useFallbackLanguage = true, fallback = undefined) {
         const language = await langmng.getLanguage();
         return await langmng.getTranslationIn(language, key, useFallbackLanguage, fallback);
     }
-
+    langmng.placeLanguageSelector = async function (element) {
+        const select = document.createElement("select");
+        select.innerHTML = "";
+        for (const [languageId, languageName] of Object.entries((await langmng.getPage()).languages)) {
+            const option = document.createElement("option");
+            option.value = languageId;
+            option.innerHTML = languageName;
+            select.appendChild(option);
+        }
+        select.value = await langmng.getLanguage();
+        select.classList.add("langmng-selector");
+        select.addEventListener("change", () => { langmng.setLanguage(select.value); });
+        element.innerHTML = "";
+        element.classList.add("langmng-selector-container");
+        element.appendChild(select);
+    }
     langmng.translateElement = async function (element) {
-        const language = await langmng.getLanguage();
         const data = await langmng.getLangmngTagsAsDictFromElement(element);
-            if (data.translate) {
-                for (let [key, value] of Object.entries(data.translate)) {
-                    if (key == "content") {
-                        langmng.getTranslation(value).then((translatedText) => {
-                            element.innerHTML = translatedText;
-                        });
-                    }
-                    else if (key.startsWith("attr.")) {
-                        langmng.getTranslation(value).then((translatedText) => {
-                            element.setAttribute(key.substring(5), translatedText);
-                        });
-                    }
+        if (data.translate) {
+            for (let [key, value] of Object.entries(data.translate)) {
+                if (key == "content") {
+                    langmng.getTranslation(value).then((translatedText) => {
+                        element.innerHTML = translatedText;
+                    });
                 }
-            }
-            if (data.visibility) {
-                if (!(await langmng.getTranslation(data.visibility, false, false))) {
-                    langmng.storeStyle(element);
-                    element.style.display = "none";
-                } else if (element.hasAttribute("langmng-previous-display")) {
-                    langmng.restoreStyle(element);
-                } else {
-                    element.style.display = "";
-                }
-            }
-            for (const [key, value] of Object.entries(data)) {
-                if (key == "translate" || key == "visibility") {
-                    continue;
-                }
-                if (key.startsWith("placeFeature")) {
-                    if (value == "languageSelect") {
-                        const select = document.createElement("select");
-                        select.innerHTML = "";
-                        for (const [languageId, languageName] of Object.entries((await langmng.getPage()).languages)) {
-                            const option = document.createElement("option");
-                            option.value = languageId;
-                            option.innerHTML = languageName;
-                            select.appendChild(option);
-                        }
-                        select.value = language;
-                        select.addEventListener("change", () => { langmng.setLanguage(select.value); });
-                        element.innerHTML = "";
-                        element.appendChild(select);
-                    } else {
-                        console.warn(`Unknown use directive: ${value}`);
-                    }
-                } else if (key.startsWith("set")) {
-                    if (value.content) {
-                        element.innerHTML = value.content;
-                    } else if (value.fadeIn || value.hideUntilTranslated || value.base || value.pageId) {
-                        continue;
-                    } else {
-                        console.warn(`Unknown set directive: ${key}`);
-                    }
-                } else {
-                    console.warn(`Unknown directive: ${key}`);
+                else if (key.startsWith("attr.")) {
+                    langmng.getTranslation(value).then((translatedText) => {
+                        element.setAttribute(key.substring(5), translatedText);
+                    });
                 }
             }
         }
+        if (data.visibility) {
+            if (!(await langmng.getTranslation(data.visibility, false, false))) {
+                langmng.storeStyle(element);
+                element.style.display = "none";
+            } else if (element.hasAttribute("langmng-previous-display")) {
+                langmng.restoreStyle(element);
+            } else {
+                element.style.display = "";
+            }
+        }
+        for (const [key, value] of Object.entries(data)) {
+            if (key == "translate" || key == "visibility") {
+                continue;
+            }
+            if (key.startsWith("placeFeature")) {
+                if (value == "languageSelect") {
+                    langmng.placeLanguageSelector(element);
+                } else {
+                    console.warn(`Unknown use directive: ${value}`);
+                }
+            } else if (key.startsWith("set")) {
+                if (value.content) {
+                    element.innerHTML = value.content;
+                } else if (value.fadeIn || value.hideUntilTranslated || value.base || value.pageId) {
+                    continue;
+                } else {
+                    console.warn(`Unknown set directive: ${key}`);
+                }
+            } else {
+                console.warn(`Unknown directive: ${key}`);
+            }
+        }
+    }
 
 
     langmng.translatePage = async function () {
@@ -209,10 +212,11 @@ window.langmng = (function () {
         }
     }
     langmng.storeStyle = function (element) {
-        element.setAttribute("data-langmng-previous-style", JSON.stringify(element.style));
+        element.setAttribute("data-langmng-old-style", element.getAttribute("style"));
     }
     langmng.restoreStyle = function (element) {
-        element.style = JSON.parse(element.getAttribute("data-langmng-previous-style"));
+        element.setAttribute("style", element.getAttribute("data-langmng-old-style"));
+        element.removeAttribute("data-langmng-old-style");
     }
     langmng.transformAtSyntaxToLangmngTags = async function () {
         for (let element of document.querySelectorAll("*")) {
@@ -234,7 +238,6 @@ window.langmng = (function () {
         localStorage.setItem("langmng.cachedTranslations", JSON.stringify(cachedTranslations));
     }
     langmng.preloadAllTranslations = async function (allowCache = true) {
-        const pageId = await langmng.getPageId();
         const languages = config.languages;
         for (const language of Object.keys(languages)) {
             await langmng.getTranslations(language, allowCache);
@@ -291,9 +294,22 @@ window.langmng = (function () {
         await langmng.reloadAllTranslationsIfOutdated();
         await langmng.translatePage();
     };
+
     document.addEventListener("DOMContentLoaded", () => {
-        langmng.initialize();
+        if (document.body.getAttribute("data-langmng-noinit") === null) {
+            langmng.initialize();
+        }
     });
 
-    return langmng;
-})();
+    const proxiedLangmng = new Proxy(langmng, {
+        get: function (target, name) {
+            return target[name];
+        },
+        set: function (target, name, value) {
+            console.error("langmng is read-only");
+            return false;
+        }
+    });
+
+    return proxiedLangmng;
+})()
