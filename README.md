@@ -11,7 +11,7 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
 1. Include the script in your HTML file:
 
     ```html
-    <script src="https://j0j0ha.github.io/langmng/langmng.js"></script>
+    <script src="https://langmng.pages.dev/langmng.js"></script>
     ```
 
 2. Create the ``config.json`` files:
@@ -73,7 +73,7 @@ This is a vanilla JavaScript tool that allows you to easily create a multilingua
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title data-langmng="translate:content=title">Document</title>
 
-        <script src="/langmng.js"></script>
+        <script src="https://langmng.pages.dev/langmng.js"></script>
     </head>
     <body data-langmng="set:base=/langmng/;set:hideUntilTranslated=true;set:fadeIn=true;">
         <h1 data-langmng="translate:content=title;">Hello World</h1>
