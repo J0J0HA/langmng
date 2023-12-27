@@ -233,6 +233,14 @@ Returns an dict of all the translations in all languages loaded from ``pages/<pa
 
 Places a language selector in the specified element.
 
+### ``async langmng.preloadTranslationsForPage(pageId)``
+
+Loads all not yet cached translations of the specified page in all available languages.
+
+### ``async langmng.preloadTranslationsForLink(link)``
+
+Loads all not yet cached translations of the page found under the specified link in all available languages. The link can be relative or absolute.
+
 ### More
 
 You can find more functions in the source code. I have just not documented them yet.

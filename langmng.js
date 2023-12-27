@@ -72,15 +72,15 @@ window.langmng = (function () {
             console.info(`Could not load page config from ${pageConfigPath}`);
         }
     };
-    langmng.getPageId = async function () {
+    langmng.getPageId = async function (path = undefined) {
         const bodyData = await langmng.getLangmngTagsAsDictFromElement(document.body);
-        const path = window.location.pathname;
+        path = path === undefined ? window.location.pathname : path;
         const pageId = config.paths[path];
         return bodyData?.set?.pageId || pageId || "unknown";
     }
-    langmng.getTranslations = async function (language = null, allowCache = true) {
-        language = language || await langmng.getLanguage();
-        const pageId = await langmng.getPageId();
+    langmng.getTranslations = async function (language = undefined, allowCache = true, pageId = undefined) {
+        language = language === undefined ? await langmng.getLanguage() : language;
+        pageId = pageId === undefined ? await langmng.getPageId() : pageId;
         if (allowCache && cachedTranslations?.[language]?.[pageId]) {
             return cachedTranslations[language][pageId];
         }
@@ -260,6 +260,15 @@ window.langmng = (function () {
             lastLanguage = null;
         }
         return lastLanguage || bodyConfig.set?.defaultLanguage || config.defaultLanguage;
+    }
+    langmng.preloadTranslationsForPage = async function (pageId) {
+        const language = await langmng.getLanguage();
+        return await langmng.getTranslations(language, true, pageId);
+    }
+    langmng.preloadTranslationsForLink = async function (link) {
+        const url = new URL(link, document.baseURI)
+        const pageId = await langmng.getPageId(url.pathname);
+        return await langmng.preloadTranslationsForPage(pageId);
     }
     langmng.setLanguage = async function (language) {
         const oldLanguage = await langmng.getLanguage();
