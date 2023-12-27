@@ -1,5 +1,7 @@
 # langmng
 
+[![GitHub Pages Deployment](https://github.com/J0J0HA/langmng/actions/workflows/jekyll-gh-pages.yml/badge.svg)](https://github.com/J0J0HA/langmng/actions/workflows/jekyll-gh-pages.yml)
+
 ## Description
 
 This is a vanilla JavaScript tool that allows you to easily create a multilingual website.
