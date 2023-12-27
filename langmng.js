@@ -207,10 +207,13 @@ window.langmng = (function () {
                 console.warn(`Unknown directive: ${key}`);
             }
         }
+        return true;
     }
 
 
     langmng.translatePage = async function () {
+        const htmlElement = document.querySelector("html");
+        htmlElement.setAttribute("lang", await langmng.getLanguage());
         const elements = document.querySelectorAll("[data-langmng]");
         let promiseList = [];
         for (const element of elements) {
@@ -290,16 +293,18 @@ window.langmng = (function () {
         return await langmng.preloadTranslationsForPage(pageId, language);
     }
     langmng.setLanguage = async function (language) {
-        const oldLanguage = await langmng.getLanguage();
+        // TODO: Make only count if already translated.
+        // const oldLanguage = await langmng.getLanguage();
         const url = new URL(window.location.href);
         if (url.searchParams.get("lang") !== null && url.searchParams.get("lang") !== language) {
             url.searchParams.set("lang", language);
             window.history.replaceState({}, document.title, url.href);
         }
         localStorage.setItem("langmng.language", language);
-        if (oldLanguage != language) {
-            await langmng.translatePage(language);
-        }
+        // if (oldLanguage != language) {
+            return await langmng.translatePage(language);
+        // }
+        return true;
     }
     langmng.initialize = async function () {
         await langmng.loadBodyConfig();
