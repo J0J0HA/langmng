@@ -218,6 +218,7 @@ window.langmng = (function () {
 
 
     langmng.translatePage = async function () {
+        await langmng.getTranslations();
         const htmlElement = document.querySelector("html");
         htmlElement.setAttribute("lang", await langmng.getLanguage());
         const elements = document.querySelectorAll("[data-langmng]");
