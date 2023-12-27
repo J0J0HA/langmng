@@ -4,7 +4,7 @@ window.langmng = (function () {
     let pageConfig = {};
     let bodyConfig = {};
     let cachedTranslations = {};
-    langmng._groupDirectives = async function (directives) {
+    langmng.groupLangmngTags = async function (directives) {
         const groupedDirectives = {};
         for (const [key, value] of Object.entries(directives)) {
             const [group, name] = key.split(":");
@@ -19,10 +19,10 @@ window.langmng = (function () {
         }
         return groupedDirectives;
     }
-    langmng.parseData = async function (data) {
+    langmng.parseLangmngTags = async function (data) {
         if (data.startsWith("@")) {
             const langmngId = data.substring(1);
-            return await langmng.parseData(pageConfig[langmngId] || "set:content=@" + langmng.getEmergencyTranslation(await langmng.getPageId(), config.defaultLanguage, "content", langmngId));
+            return await langmng.parseLangmngTags(pageConfig[langmngId] || "set:content=@" + langmng.getTranslationReplacement(await langmng.getPageId(), config.defaultLanguage, "content", langmngId));
         }
         const directives = data.split(";");
         const dataAsJson = {};
@@ -33,26 +33,26 @@ window.langmng = (function () {
             const [key, value] = directive.split("=");
             dataAsJson[key] = value;
         }
-        return this._groupDirectives(dataAsJson);
+        return this.groupLangmngTags(dataAsJson);
     }
-    langmng.getDataFromElement = async function (element) {
+    langmng.getLangmngTagsAsDictFromElement = async function (element) {
         let data = element.getAttribute("data-langmng");
         if (!data) {
             return {};
         }
-        const dataAsJson = await langmng.parseData(data);
+        const dataAsJson = await langmng.parseLangmngTags(data);
         return dataAsJson;
     }
     langmng.loadBodyConfig = async function () {
-        const bodyData = await langmng.getDataFromElement(document.body);
+        const bodyData = await langmng.getLangmngTagsAsDictFromElement(document.body);
         bodyConfig = bodyData;
     }
-    langmng.getConfigPath = async function (path) {
+    langmng.getPathTo = async function (path) {
         return (bodyConfig?.set?.base || "/langmng/") + path;
     }
     langmng.loadConfig = async function () {
         try {
-            const response = await fetch(await langmng.getConfigPath("config.json"));
+            const response = await fetch(await langmng.getPathTo("config.json"));
             const responseAsJson = await response.json();
             config = responseAsJson;
         }
@@ -62,7 +62,7 @@ window.langmng = (function () {
         }
 
         const pageId = await langmng.getPageId();
-        const pageConfigPath = await langmng.getConfigPath(`pages/${pageId}.json`);
+        const pageConfigPath = await langmng.getPathTo(`pages/${pageId}.json`);
         try {
             const responsePageConfig = await fetch(pageConfigPath);
             const responsePageConfigAsJson = await responsePageConfig.json();
@@ -73,82 +73,91 @@ window.langmng = (function () {
         }
     };
     langmng.getPageId = async function () {
-        const bodyData = await langmng.getDataFromElement(document.body);
+        const bodyData = await langmng.getLangmngTagsAsDictFromElement(document.body);
         const path = window.location.pathname;
         const pageId = config.paths[path];
         return bodyData?.set?.pageId || pageId || "unknown";
     }
-    langmng.loadTranslations = async function (language, page, allowCache = true) {
-        if (allowCache && cachedTranslations?.[language]?.[page]) {
-            return cachedTranslations[language][page];
+    langmng.getTranslations = async function (language = null, allowCache = true) {
+        language = language || await langmng.getLanguage();
+        const pageId = await langmng.getPageId();
+        if (allowCache && cachedTranslations?.[language]?.[pageId]) {
+            return cachedTranslations[language][pageId];
         }
         try {
-            const response = await fetch(await langmng.getConfigPath(`pages/${page}/${language}.json`));
+            const response = await fetch(await langmng.getPathTo(`pages/${pageId}/${language}.json`));
             const responseAsJson = await response.json();
             cachedTranslations[language] = cachedTranslations[language] || {};
-            cachedTranslations[language][page] = responseAsJson;
+            cachedTranslations[language][pageId] = responseAsJson;
             return responseAsJson;
         } catch (e) {
-            console.error(`Could not load translation for page ${page} and language ${language}`, e);
+            console.error(`Could not load translation for page ${pageId} and language ${language}`, e);
             return {};
         }
     }
-    langmng.getPageConfig = async function () {
+    langmng.getConfig = async function () {
+        return {
+            config: config,
+            pageConfig: pageConfig,
+            bodyConfig: bodyConfig
+        };
+    }
+    langmng.getPage = async function () {
         const pageId = await langmng.getPageId();
         return {
             languages: config.languages,
             pageId: pageId,
-            loadTranslations: async function (language) {
-                return await langmng.loadTranslations(language, pageId);
+            getTranslations: async function (language) {
+                return await langmng.getTranslations(language);
             }
         };
     }
-    langmng.getEmergencyTranslation = function (pageId, language, key, value) {
+    langmng.getTranslationReplacement = async function (pageId, language, value) {
         const combinedKey = pageId + "." + language + "." + value;
-        if (key == "content") {
-            return combinedKey;
-        } else if (key.startsWith("attr.")) {
-            return combinedKey;
-        } else {
-            return key + "=" + combinedKey;
-        }
+        return combinedKey;
     }
-    langmng.getTranslatedText = async function (language, key, value) {
+    langmng.getTranslationIn = async function (language, value, useFallbackLanguage = true, fallback) {
         const fallbackLanguage = bodyConfig.set?.fallbackLanguage || config.fallbackLanguage;
-        const pageConfig = await langmng.getPageConfig();
+        const pageConfig = await langmng.getPage();
         const pageId = pageConfig.pageId;
-        const translations = await pageConfig.loadTranslations(language);
-        if (language == fallbackLanguage && !translations[value]) {
-            console.warn(`No translation found for key: ${key}, value: ${value}`);
-            return langmng.getEmergencyTranslation(pageId, language, key, value);
-        } else if (!translations[value]) {
-            console.warn(`No translation found for key: ${key}, value: ${value} (language: ${language}))`);
-            return langmng.getTranslatedText(fallbackLanguage, key, value);
+        const translations = await pageConfig.getTranslations(language);
+        if (translations[value] === undefined) {
+            console.warn(`No translation found for key: ${value} (language: ${language})`);
+            if (language !== fallbackLanguage && useFallbackLanguage) {
+                console.log(`Trying fallback language: ${fallbackLanguage}`)
+                return await langmng.getTranslationIn(fallbackLanguage, value, false, fallback === undefined ? await langmng.getTranslationReplacement(pageId, language, value) : fallback);
+            } else if (fallback !== undefined) {
+                return fallback;
+            }
+            return await langmng.getTranslationReplacement(pageId, language, value);
         }
         return translations[value];
     }
-    langmng.translate = async function (language) {
-        const pageConfig = await langmng.getPageConfig();
-        const translations = await pageConfig.loadTranslations(language);
-        const elements = document.querySelectorAll("[data-langmng]");
-        for (const element of elements) {
-            const data = await langmng.getDataFromElement(element);
+
+    langmng.getTranslation = async function (key, useFallbackLanguage = true, fallback) {
+        const language = await langmng.getLanguage();
+        return await langmng.getTranslationIn(language, key, useFallbackLanguage, fallback);
+    }
+
+    langmng.translateElement = async function (element) {
+        const language = await langmng.getLanguage();
+        const data = await langmng.getLangmngTagsAsDictFromElement(element);
             if (data.translate) {
                 for (let [key, value] of Object.entries(data.translate)) {
                     if (key == "content") {
-                        langmng.getTranslatedText(language, key, value).then((translatedText) => {
+                        langmng.getTranslation(value).then((translatedText) => {
                             element.innerHTML = translatedText;
                         });
                     }
                     else if (key.startsWith("attr.")) {
-                        langmng.getTranslatedText(language, key, value).then((translatedText) => {
+                        langmng.getTranslation(value).then((translatedText) => {
                             element.setAttribute(key.substring(5), translatedText);
                         });
                     }
                 }
             }
             if (data.visibility) {
-                if (!translations[data.visibility]) {
+                if (!(await langmng.getTranslation(data.visibility, false, false))) {
                     langmng.storeStyle(element);
                     element.style.display = "none";
                 } else if (element.hasAttribute("langmng-previous-display")) {
@@ -165,7 +174,7 @@ window.langmng = (function () {
                     if (value == "languageSelect") {
                         const select = document.createElement("select");
                         select.innerHTML = "";
-                        for (const [languageId, languageName] of Object.entries(pageConfig.languages)) {
+                        for (const [languageId, languageName] of Object.entries((await langmng.getPage()).languages)) {
                             const option = document.createElement("option");
                             option.value = languageId;
                             option.innerHTML = languageName;
@@ -191,6 +200,13 @@ window.langmng = (function () {
                 }
             }
         }
+
+
+    langmng.translatePage = async function () {
+        const elements = document.querySelectorAll("[data-langmng]");
+        for (const element of elements) {
+            langmng.translateElement(element);
+        }
     }
     langmng.storeStyle = function (element) {
         element.setAttribute("data-langmng-previous-style", JSON.stringify(element.style));
@@ -198,7 +214,7 @@ window.langmng = (function () {
     langmng.restoreStyle = function (element) {
         element.style = JSON.parse(element.getAttribute("data-langmng-previous-style"));
     }
-    langmng.readDirectivesFromElements = async function () {
+    langmng.transformAtSyntaxToLangmngTags = async function () {
         for (let element of document.querySelectorAll("*")) {
             let dirs = element.getAttribute("data-langmng") || "";
             if (element.innerHTML.startsWith("@langmng:")) {
@@ -208,22 +224,22 @@ window.langmng = (function () {
             element.setAttribute("data-langmng", dirs);
         }
     }
-    langmng.loadCaches = async function () {
+    langmng.loadCache = async function () {
         const cachedTranslationsFromLStore = localStorage.getItem("langmng.cachedTranslations");
         if (cachedTranslationsFromLStore) {
             cachedTranslations = JSON.parse(cachedTranslationsFromLStore);
         }
     }
-    langmng.storeCaches = async function () {
+    langmng.storeCache = async function () {
         localStorage.setItem("langmng.cachedTranslations", JSON.stringify(cachedTranslations));
     }
     langmng.preloadAllTranslations = async function (allowCache = true) {
         const pageId = await langmng.getPageId();
         const languages = config.languages;
         for (const language of Object.keys(languages)) {
-            await langmng.loadTranslations(language, pageId, allowCache);
+            await langmng.getTranslations(language, allowCache);
         }
-        await langmng.storeCaches();
+        await langmng.storeCache();
     }
     langmng.reloadAllTranslations = async function () {
         await langmng.preloadAllTranslations(false);
@@ -246,7 +262,7 @@ window.langmng = (function () {
         const oldLanguage = await langmng.getLanguage();
         localStorage.setItem("langmng.language", language);
         if (oldLanguage != language) {
-            await langmng.translate(language);
+            await langmng.translatePage(language);
         }
     }
     langmng.initialize = async function () {
@@ -261,9 +277,9 @@ window.langmng = (function () {
                 }, 0);
             }
         }
-        await langmng.loadCaches();
+        await langmng.loadCache();
         await langmng.loadConfig();
-        await langmng.readDirectivesFromElements();
+        await langmng.transformAtSyntaxToLangmngTags();
         const language = await langmng.getLanguage();
         await langmng.setLanguage(language);
         if (bodyConfig?.set?.hideUntilTranslated === "true") {
@@ -273,7 +289,7 @@ window.langmng = (function () {
             }, 500);
         }
         await langmng.reloadAllTranslationsIfOutdated();
-        await langmng.translate(await langmng.getLanguage());
+        await langmng.translatePage();
     };
     document.addEventListener("DOMContentLoaded", () => {
         langmng.initialize();
