@@ -292,7 +292,7 @@ window.langmng = (function () {
     langmng.setLanguage = async function (language) {
         const oldLanguage = await langmng.getLanguage();
         const url = new URL(window.location.href);
-        if (url.searchParams.get("lang") !== language) {
+        if (url.searchParams.get("lang") !== null && url.searchParams.get("lang") !== language) {
             url.searchParams.set("lang", language);
             window.history.replaceState({}, document.title, url.href);
         }
