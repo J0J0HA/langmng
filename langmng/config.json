@@ -1,6 +1,7 @@
 {
     "paths": {
-        "/example.html": "example"
+        "/example.html": "example",
+        "/example": "example"
     },
     "languages": {
         "en": "English",
