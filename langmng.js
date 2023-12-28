@@ -4,6 +4,7 @@ window.langmng = (function () {
     let pageConfig = {};
     let bodyConfig = {};
     let cachedTranslations = {};
+    let lastTranslatedIn = null;
     langmng.groupLangmngTags = async function (directives) {
         const groupedDirectives = {};
         for (const [key, value] of Object.entries(directives)) {
@@ -133,7 +134,6 @@ window.langmng = (function () {
         }
         return translations[value];
     }
-
     langmng.getTranslation = async function (key, useFallbackLanguage = true, fallback = undefined) {
         const language = await langmng.getLanguage();
         return await langmng.getTranslationIn(language, key, useFallbackLanguage, fallback);
@@ -215,8 +215,6 @@ window.langmng = (function () {
         }
         return true;
     }
-
-
     langmng.translatePage = async function () {
         await langmng.getTranslations();
         const htmlElement = document.querySelector("html");
@@ -226,6 +224,7 @@ window.langmng = (function () {
         for (const element of elements) {
             promiseList.push(langmng.translateElement(element));
         }
+        lastTranslatedIn = await langmng.getLanguage();
         return await Promise.all(promiseList);
     }
     langmng.storeStyle = function (element) {
@@ -300,17 +299,15 @@ window.langmng = (function () {
         return await langmng.preloadTranslationsForPage(pageId, language);
     }
     langmng.setLanguage = async function (language) {
-        // TODO: Make only count if already translated.
-        // const oldLanguage = await langmng.getLanguage();
         const url = new URL(window.location.href);
         if (url.searchParams.get("lang") !== null && url.searchParams.get("lang") !== language) {
             url.searchParams.set("lang", language);
             window.history.replaceState({}, document.title, url.href);
         }
         localStorage.setItem("langmng.language", language);
-        // if (oldLanguage != language) {
+        if (lastTranslatedIn != language) {
         return await langmng.translatePage(language);
-        // }
+        }
         return true;
     }
     langmng.initialize = async function () {
