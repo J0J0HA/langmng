@@ -268,7 +268,7 @@ If the parameter is present in the link, changes to the language will not be ref
 
 You can customize the look of the language selector by changing the look of the ``lanmng-language-selector`` and ``langmng-language-selector-container`` class in CSS.
 
-## ``incluse``-Feature
+## ``include``-Feature
 
 If you have an element containing Text as well as other elements, you can use the ``include``-feature to include the elements in the translation. For example, if you have the following HTML:
 
