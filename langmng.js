@@ -236,7 +236,7 @@ window.langmng = (function () {
     }
     langmng.transformAtSyntaxToLangmngTags = async function () {
         for (let element of document.querySelectorAll("*")) {
-            if (!element.hasAttribute("data-langmng") continue;
+            if (!element.hasAttribute("data-langmng")) continue;
             let dirs = element.getAttribute("data-langmng") || "";
             if (element.innerHTML.startsWith("@langmng:")) {
                 dirs += ";translate:content=" + element.innerHTML.substring(9);
